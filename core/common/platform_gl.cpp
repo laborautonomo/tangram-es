@@ -282,4 +282,49 @@ void GL::deleteVertexArrays(GLsizei n, const GLuint *arrays) {
 void GL::genVertexArrays(GLsizei n, GLuint *arrays) {
     GL_CHECK(glGenVertexArrays(n, arrays));
 }
+
+// Framebuffer
+void bindFramebuffer(GLenum target, GLuint framebuffer) {
+    GL_CHECK(glBindFramebuffer(target, framebuffer));
+}
+
+void genFramebuffers(GLsizei n, GLuint *framebuffers) {
+    GL_CHECK(glGenFramebuffers(n, framebuffers));
+}
+
+void framebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget,
+                          GLuint texture, GLint level) {
+    GL_CHECK(glFramebufferTexture2D(target, attachment, textarget, texture, level));
+}
+
+void renderbufferStorage(GLenum target, GLenum internalformat, GLsizei width,
+                         GLsizei height) {
+    GL_CHECK(glRenderbufferStorage(target, internalformat, width, height));
+}
+
+void framebufferRenderbuffer(GLenum target, GLenum attachment,
+                             GLenum renderbuffertarget, GLuint renderbuffer) {
+    GL_CHECK(glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer));
+}
+
+void genRenderbuffers(GLsizei n, GLuint *renderbuffers) {
+    GL_CHECK(glGenRenderbuffers(n, renderbuffers));
+}
+
+void bindRenderbuffer(GLenum target, GLuint renderbuffer) {
+    GL_CHECK(glBindRenderbuffer(target, renderbuffer));
+}
+
+void deleteFramebuffers(GLsizei n, const GLuint *framebuffers) {
+    GL_CHECK(glDeleteFramebuffers(n, framebuffers));
+}
+
+void deleteRenderbuffers(GLsizei n, const GLuint *renderbuffers) {
+    GL_CHECK(glDeleteRenderbuffers(n, renderbuffers));
+}
+
+GLenum checkFramebufferStatus(GLenum target) {
+    GL_CHECK(glCheckFramebufferStatus(target));
+}
+
 }
