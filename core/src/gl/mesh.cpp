@@ -161,7 +161,8 @@ void MeshBase::upload(RenderState& rs) {
     m_isUploaded = true;
 }
 
-bool MeshBase::draw(RenderState& rs, ShaderProgram& _shader) {
+bool MeshBase::draw(RenderState& rs, ShaderProgram& _shader, bool _useVao) {
+    bool useVao = _useVao && Hardware::supportsVAOs;
 
     checkValidity(rs);
 
@@ -180,7 +181,7 @@ bool MeshBase::draw(RenderState& rs, ShaderProgram& _shader) {
         subDataUpload(rs);
     }
 
-    if (Hardware::supportsVAOs) {
+    if (useVao) {
         if (!m_vaos.isInitialized()) {
             // Capture vao state
             m_vaos.initialize(rs, _shader, m_vertexOffsets, *m_vertexLayout, m_glVertexBuffer, m_glIndexBuffer);
@@ -202,7 +203,7 @@ bool MeshBase::draw(RenderState& rs, ShaderProgram& _shader) {
         uint32_t nIndices = o.first;
         uint32_t nVertices = o.second;
 
-        if (!Hardware::supportsVAOs) {
+        if (!useVao) {
             // Enable vertex attribs via vertex layout object
             size_t byteOffset = vertexOffset * m_vertexLayout->getStride();
             m_vertexLayout->enable(rs,  _shader, byteOffset);
@@ -223,7 +224,7 @@ bool MeshBase::draw(RenderState& rs, ShaderProgram& _shader) {
         indiceOffset += nIndices;
     }
 
-    if (Hardware::supportsVAOs) {
+    if (useVao) {
         m_vaos.unbind();
     }
 
