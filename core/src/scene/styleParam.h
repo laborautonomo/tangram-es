@@ -134,18 +134,25 @@ struct StyleParam {
     };
 
     struct Function {
-        // explicit Function(int32_t _id) : id(_id) {}
+        explicit Function(int32_t _id) : id(_id) {}
         int32_t id;
         bool operator==(const Function& _other) const { return id == _other.id; }
+    };
 
-        static Function get(int32_t id) { return Function { id }; }
-    private:
-        Function(int32_t id){};
-        Function(){};
+    struct TextSource {
+        std::vector<std::string> keys;
+
+        bool operator==(const TextSource& _other) const {
+            if (keys.size() != _other.keys.size()) { return false; }
+            for (size_t i = 0; i < keys.size(); i++) {
+                if (!(keys[i] == _other.keys[i])) { return false;}
+            }
+            return true;
+        }
     };
 
     using Value = variant<none_type, bool, float, uint32_t, std::string, glm::vec2, Width,
-                          LabelProperty::Anchors, Function, Stops>;
+                          LabelProperty::Anchors, Function, Stops, TextSource>;
 
     StyleParam() :
         key(StyleParamKey::none),
