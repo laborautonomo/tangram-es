@@ -21,7 +21,7 @@ SceneLayer instance_a() {
     Filter f = Filter(); // passes everything
 
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "value_a");
+    params.emplace_back(StyleParamKey::order, std::string{"value_a"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("dg0", dg0, std::move(params));
@@ -34,7 +34,7 @@ SceneLayer instance_b() {
     Filter f = Filter::MatchAny({}); // passes nothing
 
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "value_b");
+    params.emplace_back(StyleParamKey::order, std::string{"value_b"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("dg1", dg1, std::move(params));
@@ -46,7 +46,7 @@ SceneLayer instance_c() {
 
     Filter f = Filter(); // passes everything
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "value_c");
+    params.emplace_back(StyleParamKey::order, std::string{"value_c"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("dg2", dg2, std::move(params));
@@ -63,7 +63,7 @@ SceneLayer instance_d() {
     Filter f = Filter(); // passes everything
 
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "value_d");
+    params.emplace_back(StyleParamKey::order, std::string{"value_d"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("dg0", dg0, std::move(params));
@@ -76,7 +76,7 @@ SceneLayer instance_e() {
     Filter f = Filter(); // passes everything
 
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "value_e");
+    params.emplace_back(StyleParamKey::order, std::string{"value_e"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("dg2", dg2, std::move(params));
@@ -115,7 +115,7 @@ SceneLayer instance() {
     Filter f = Filter::MatchExistence("base", true);
 
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "a");
+    params.emplace_back(StyleParamKey::order, std::string{"a"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("group1", group1, std::move(params));

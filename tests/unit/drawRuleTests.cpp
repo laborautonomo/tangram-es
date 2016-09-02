@@ -16,9 +16,9 @@ const int dg2 = 1;
 std::vector<DrawRuleData> instance_a() {
 
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "value_0a");
-    params.emplace_back(StyleParamKey::join, "value_4a");
-    params.emplace_back(StyleParamKey::color, "value_1a");
+    params.emplace_back(StyleParamKey::order, std::string{"value_0a"});
+    params.emplace_back(StyleParamKey::join, std::string{"value_4a"});
+    params.emplace_back(StyleParamKey::color, std::string{"value_1a"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("dg1", dg1, std::move(params));
@@ -28,11 +28,11 @@ std::vector<DrawRuleData> instance_a() {
 std::vector<DrawRuleData> instance_b() {
 
     std::vector<StyleParam> params;
-    params.emplace_back(StyleParamKey::order, "value_0b");
-    params.emplace_back(StyleParamKey::width, "value_2b");
-    params.emplace_back(StyleParamKey::color, "value_1b");
-    params.emplace_back(StyleParamKey::cap, "value_3b");
-    params.emplace_back(StyleParamKey::style, "value_4b");
+    params.emplace_back(StyleParamKey::order, std::string{"value_0b"});
+    params.emplace_back(StyleParamKey::width, std::string{"value_2b"});
+    params.emplace_back(StyleParamKey::color, std::string{"value_1b"});
+    params.emplace_back(StyleParamKey::cap, std::string{"value_3b"});
+    params.emplace_back(StyleParamKey::style, std::string{"value_4b"});
 
     std::vector<DrawRuleData> rules;
     rules.emplace_back("dg1", dg1, std::move(params));
@@ -51,7 +51,6 @@ std::vector<DrawRuleData> instance_c() {
 }
 
 TEST_CASE("DrawRule correctly merges with another DrawRule", "[DrawRule]") {
-
 
     const SceneLayer layer_a = { "a", Filter(), instance_a(), {} };
     const SceneLayer layer_b = { "b", Filter(), instance_b(), {} };
