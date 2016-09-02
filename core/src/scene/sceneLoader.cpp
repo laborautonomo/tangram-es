@@ -1372,7 +1372,7 @@ void SceneLoader::parseStyleParams(Node params, const std::shared_ptr<Scene>& sc
 
         if (key == "text") {
             // Add StyleParam to signify that icon uses text
-            out.push_back(StyleParam{ StyleParamKey::point_text, "" });
+            out.emplace_back(StyleParamKey::point_text, StyleParam::Value{""});
         }
 
         Node value = prop.second;
@@ -1382,11 +1382,10 @@ void SceneLoader::parseStyleParams(Node params, const std::shared_ptr<Scene>& sc
             const std::string& val = value.Scalar();
 
             if (val.compare(0, 8, "function") == 0) {
-                StyleParam param(key, "");
-                param.function = scene->addJsFunction(val);
-                out.push_back(std::move(param));
+                out.emplace_back(StyleParam::getKey(key),
+                                 StyleParam::Function { scene->addJsFunction(val) });
             } else {
-                out.push_back(StyleParam{ key, val });
+                out.emplace_back(key, val);
             }
             break;
         }
@@ -1396,28 +1395,26 @@ void SceneLoader::parseStyleParams(Node params, const std::shared_ptr<Scene>& sc
                 if (styleKey != StyleParamKey::none) {
 
                     if (StyleParam::isColor(styleKey)) {
-                        scene->stops().push_back(Stops::Colors(value));
-                        out.push_back(StyleParam{ styleKey, &(scene->stops().back()) });
+                        out.emplace_back(styleKey, Stops::Colors(value));
                     } else if (StyleParam::isWidth(styleKey)) {
                         std::vector<Unit> allowedUnits;
                         StyleParam::unitsForStyleParam(styleKey, allowedUnits);
-                        scene->stops().push_back(Stops::Widths(value, *scene->mapProjection(), allowedUnits));
-                        out.push_back(StyleParam{ styleKey, &(scene->stops().back()) });
+                        out.emplace_back(styleKey, Stops::Widths(value,
+                                                                 scene->mapProjection()->TileSize(),
+                                                                 allowedUnits));
                     } else if (StyleParam::isOffsets(styleKey)) {
                         std::vector<Unit> allowedUnits;
                         StyleParam::unitsForStyleParam(styleKey, allowedUnits);
-                        scene->stops().push_back(Stops::Offsets(value, allowedUnits));
-                        out.push_back(StyleParam{ styleKey, &(scene->stops().back()) });
+                        out.emplace_back(styleKey, Stops::Offsets(value, allowedUnits));
                     } else if (StyleParam::isFontSize(styleKey)) {
-                        scene->stops().push_back(Stops::FontSize(value));
-                        out.push_back(StyleParam{ styleKey, &(scene->stops().back()) });
+                        out.emplace_back(styleKey, Stops::FontSize(value));
                     }
                 } else {
                     LOGW("Unknown style parameter %s", key.c_str());
                 }
 
             } else {
-                out.push_back(StyleParam{ key, parseSequence(value) });
+                out.emplace_back(key, parseSequence(value));
             }
             break;
         }
@@ -1543,7 +1540,7 @@ void SceneLoader::parseTransition(Node params, const std::shared_ptr<Scene>& sce
             }
             for (auto child : prop.second) {
                 auto childKey = prefixedKey + DELIMITER + child.first.as<std::string>();
-                out.push_back(StyleParam{ childKey, child.second.as<std::string>() });
+                out.emplace_back(childKey, child.second.as<std::string>());
             }
         }
     }
@@ -1586,7 +1583,7 @@ SceneLayer SceneLoader::loadSublayer(Node layer, const std::string& layerName, c
         }
     }
 
-    return { layerName, std::move(filter), rules, std::move(sublayers), visible };
+    return { layerName, std::move(filter), std::move(rules), std::move(sublayers), visible };
 }
 
 void SceneLoader::loadLayer(const std::pair<Node, Node>& layer, const std::shared_ptr<Scene>& scene) {

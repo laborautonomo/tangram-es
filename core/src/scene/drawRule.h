@@ -37,6 +37,11 @@ class StyleContext;
 
 struct DrawRuleData {
 
+    DrawRuleData& operator=(const DrawRuleData) = delete;
+    DrawRuleData(const DrawRuleData&) = delete;
+
+    DrawRuleData(DrawRuleData&&) = default;
+
     // https://github.com/tangrams/tangram-docs/blob/gh-pages/pages/draw.md#style-parameters
     std::vector<StyleParam> parameters;
 
@@ -94,7 +99,7 @@ struct DrawRule {
 
     template<typename T>
     bool get(StyleParamKey _key, T& _value) const {
-        if (auto& param = findParameter(_key)) {
+        if (const auto& param = findParameter(_key)) {
             return StyleParam::Value::visit(param.value, StyleParam::visitor<T>{ _value });
         }
         return false;
@@ -102,7 +107,7 @@ struct DrawRule {
 
     template<typename T>
     const T* get(StyleParamKey _key) const {
-        if (auto& param = findParameter(_key)) {
+        if (const auto& param = findParameter(_key)) {
             return StyleParam::Value::visit(param.value, StyleParam::visitor_ptr<T>{});
         }
         return nullptr;

@@ -25,6 +25,8 @@ struct Color {
         );
     }
 
+    bool operator==(const Color& _other) const { return abgr == _other.abgr; }
+    bool operator!=(const Color& _other) const { return abgr != _other.abgr; }
 };
 
 }
