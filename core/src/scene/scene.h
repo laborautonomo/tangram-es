@@ -74,6 +74,7 @@ public:
     auto& fontContext() { return m_fontContext; }
     auto& globals() { return m_globals; }
     Style* findStyle(const std::string& _name);
+    auto& filterPropertyKeys() { return m_filterPropertyKeys; }
 
     const auto& path() const { return m_path; }
     const auto& resourceRoot() const { return m_resourceRoot; }
@@ -86,6 +87,7 @@ public:
     const auto& mapProjection() const { return m_mapProjection; };
     const auto& fontContext() const { return m_fontContext; }
     const auto& globals() const { return m_globals; }
+    const auto& filterPropertyKeys() const { return m_filterPropertyKeys; }
 
     const Style* findStyle(const std::string& _name) const;
     const Light* findLight(const std::string& _name) const;
@@ -152,6 +154,8 @@ private:
     float m_pixelScale = 1.0f;
 
     float m_time = 0.0;
+
+    std::vector<std::string> m_filterPropertyKeys;
 
 };
 
