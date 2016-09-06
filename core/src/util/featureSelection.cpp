@@ -67,8 +67,8 @@ GLuint FeatureSelection::readBufferAt(RenderState& _rs, float _x, float _y,
     m_framebuffer->bind(_rs);
 
     GLuint pixel;
-    GL::readPixels(fbPosition.x, fbPosition.y, 1, 1, GL_RGBA,
-                   GL_UNSIGNED_BYTE, &pixel);
+    GL::readPixels(floorf(fbPosition.x), floorf(fbPosition.y),
+                  1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixel);
 
     _rs.applySavedFramebufferState();
 
