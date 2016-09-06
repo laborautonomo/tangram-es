@@ -293,17 +293,17 @@ void GL::genFramebuffers(GLsizei n, GLuint *framebuffers) {
 }
 
 void GL::framebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget,
-                          GLuint texture, GLint level) {
+                              GLuint texture, GLint level) {
     GL_CHECK(glFramebufferTexture2D(target, attachment, textarget, texture, level));
 }
 
 void GL::renderbufferStorage(GLenum target, GLenum internalformat, GLsizei width,
-                         GLsizei height) {
+                             GLsizei height) {
     GL_CHECK(glRenderbufferStorage(target, internalformat, width, height));
 }
 
 void GL::framebufferRenderbuffer(GLenum target, GLenum attachment,
-                             GLenum renderbuffertarget, GLuint renderbuffer) {
+                                 GLenum renderbuffertarget, GLuint renderbuffer) {
     GL_CHECK(glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer));
 }
 
