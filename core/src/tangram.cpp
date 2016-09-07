@@ -332,10 +332,10 @@ bool Map::update(float _dt) {
     bool tilesChanged = impl->tileManager.hasTileSetChanged();
     bool tilesLoading = impl->tileManager.hasLoadingTiles();
     bool labelsNeedUpdate = impl->labels.needUpdate();
-    bool resourceLoading = (impl->scene->resourceLoad > 0);
+    bool texResourceLoading = (impl->scene->texResourceLoad > 0);
     bool nextScene = bool(impl->nextScene);
 
-    if (viewChanged || tilesChanged || tilesLoading || labelsNeedUpdate || resourceLoading || nextScene) {
+    if (viewChanged || tilesChanged || tilesLoading || labelsNeedUpdate || texResourceLoading || nextScene) {
         viewComplete = false;
     }
 
@@ -346,6 +346,11 @@ bool Map::update(float _dt) {
 }
 
 void Map::render() {
+
+    // Do not render if any texture resources are in process of being downloaded
+    if (impl->scene->texResourceLoad > 0) {
+        return;
+    }
 
     FrameInfo::beginFrame();
 

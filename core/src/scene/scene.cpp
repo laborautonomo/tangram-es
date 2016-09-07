@@ -28,7 +28,7 @@ Scene::Scene(const std::string& _path)
       m_path(_path),
       m_fontContext(std::make_shared<FontContext>()) {
 
-    resourceLoad = 0;
+    texResourceLoad = 0;
 
     std::regex r("^(http|https):/");
     std::smatch match;
