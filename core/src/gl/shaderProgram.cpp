@@ -187,7 +187,9 @@ GLuint ShaderProgram::makeLinkedShaderProgram(GLint _fragShader, GLint _vertShad
         if (infoLength > 1) {
             std::vector<GLchar> infoLog(infoLength);
             GL::getProgramInfoLog(program, infoLength, NULL, &infoLog[0]);
-            LOGE("linking program:\n%s", &infoLog[0]);
+            LOGE("Linking program:\n%s", &infoLog[0]);
+            LOGE("Fragment shader source:\n%s", m_fragmentShaderSource.c_str());
+            LOGE("Vertex shader source:\n%s", m_vertexShaderSource.c_str());
         }
 
         GL::deleteProgram(program);
