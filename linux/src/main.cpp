@@ -3,6 +3,7 @@
 
 #include "tangram.h"
 #include "data/clientGeoJsonSource.h"
+#include "debug/textDisplay.h"
 #include "platform_linux.h"
 
 #include <sys/types.h>
@@ -87,14 +88,15 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         logMsg("pick feature\n");
         map->clearDataSource(*data_source, true, true);
 
-        auto picks = map->pickFeaturesAt(x, y);
-        std::string name;
-        logMsg("picked %d features\n", picks.size());
-        for (const auto& it : picks) {
-            if (it.properties->getString("name", name)) {
-                logMsg(" - %f\t %s\n", it.distance, name.c_str());
+        map->pickFeaturesAt(x, y, [](const auto& items) {
+            std::string name;
+            for (const auto& item : items) {
+                if (item.properties->getString("name", name)) {
+                    LOGS("%s", name.c_str());
+                }
             }
-        }
+        });
+
     } else if ((time - last_time_pressed) < single_tap_time) {
         LngLat p1;
         map->screenPositionToLngLat(x, y, &p1.longitude, &p1.latitude);
@@ -192,6 +194,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             case GLFW_KEY_8:
                 Tangram::toggleDebugFlag(Tangram::DebugFlags::tangram_stats);
+                break;
+            case GLFW_KEY_9:
+                Tangram::toggleDebugFlag(Tangram::DebugFlags::selection_buffer);
                 break;
             case GLFW_KEY_R:
                 map->loadSceneAsync(sceneFile.c_str());
