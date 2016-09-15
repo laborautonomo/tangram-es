@@ -256,6 +256,42 @@ void GL::uniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, co
     GL_CHECK(glUniformMatrix4fv(location, count, transpose, value));
 }
 
+void GL::bindFramebuffer(GLenum target, GLuint framebuffer) {
+    GL_CHECK(glBindFramebuffer(target, framebuffer));
+}
+void GL::genFramebuffers(GLsizei n, GLuint *framebuffers) {
+    GL_CHECK(glGenFramebuffers(n, framebuffers));
+}
+void GL::framebufferTexture2D(GLenum target, GLenum attachment,
+                              GLenum textarget, GLuint texture, GLint level) {
+    GL_CHECK(glFramebufferTexture2D(target, attachment, textarget, texture, level));
+}
+void GL::renderbufferStorage(GLenum target, GLenum internalformat,
+                             GLsizei width, GLsizei height) {
+    GL_CHECK(glRenderbufferStorage(target, internalformat, width, height));
+}
+void GL::framebufferRenderbuffer(GLenum target, GLenum attachment,
+                                 GLenum renderbuffertarget, GLuint renderbuffer) {
+    GL_CHECK(glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer));
+}
+void GL::genRenderbuffers(GLsizei n, GLuint *renderbuffers) {
+    GL_CHECK(glGenRenderbuffers(n, renderbuffers));
+}
+void GL::bindRenderbuffer(GLenum target, GLuint renderbuffer) {
+    GL_CHECK(glBindRenderbuffer(target, renderbuffer));
+}
+void GL::deleteFramebuffers(GLsizei n, const GLuint *framebuffers) {
+    GL_CHECK(glDeleteFramebuffers(n, framebuffers));
+}
+void GL::deleteRenderbuffers(GLsizei n, const GLuint *renderbuffers) {
+    GL_CHECK(glDeleteRenderbuffers(n, renderbuffers));
+}
+GLenum GL::checkFramebufferStatus(GLenum target) {
+    auto result = glCheckFramebufferStatus(target);
+    GL_CHECK();
+    return result;
+}
+
 // mapbuffer
 void* GL::mapBuffer(GLenum target, GLenum access) {
     auto result =  glMapBuffer(target, access);

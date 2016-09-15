@@ -194,6 +194,7 @@ typedef char            GLchar;
 #define GL_DEPTH_RANGE                  0x0B70
 #define GL_DEPTH_WRITEMASK              0x0B72
 #define GL_DEPTH_COMPONENT              0x1902
+#define GL_DEPTH_COMPONENT16            0x81A5
 
 /* Stencil */
 #define GL_STENCIL_BITS                 0x0D57
@@ -224,6 +225,32 @@ typedef char            GLchar;
 #define GL_TEXTURE_WRAP_T               0x2803
 #define GL_TEXTURE_MAG_FILTER           0x2800
 #define GL_TEXTURE_MIN_FILTER           0x2801
+
+/* Framebuffers, Render buffers */
+#define GL_FRAMEBUFFER                  0x8D40
+#define GL_RENDERBUFFER                 0x8D41
+#define GL_RENDERBUFFER_WIDTH           0x8D42
+#define GL_RENDERBUFFER_HEIGHT          0x8D43
+#define GL_RENDERBUFFER_INTERNAL_FORMAT 0x8D44
+#define GL_RENDERBUFFER_RED_SIZE        0x8D50
+#define GL_RENDERBUFFER_GREEN_SIZE      0x8D51
+#define GL_RENDERBUFFER_BLUE_SIZE       0x8D52
+#define GL_RENDERBUFFER_ALPHA_SIZE      0x8D53
+#define GL_RENDERBUFFER_DEPTH_SIZE      0x8D54
+#define GL_RENDERBUFFER_STENCIL_SIZE    0x8D55
+#define GL_COLOR_ATTACHMENT0            0x8CE0
+#define GL_DEPTH_ATTACHMENT             0x8D00
+#define GL_STENCIL_ATTACHMENT           0x8D20
+#define GL_NONE                         0
+#define GL_FRAMEBUFFER_COMPLETE         0x8CD5
+#define GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT 0x8CD6
+#define GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT 0x8CD7
+#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS 0x8CD9
+#define GL_FRAMEBUFFER_UNSUPPORTED      0x8CDD
+#define GL_FRAMEBUFFER_BINDING          0x8CA6
+#define GL_RENDERBUFFER_BINDING         0x8CA7
+#define GL_MAX_RENDERBUFFER_SIZE        0x84E8
+#define GL_INVALID_FRAMEBUFFER_OPERATION 0x0506
 
 // glext.h
 #define GL_ARRAY_BUFFER                 0x8892
@@ -297,6 +324,21 @@ struct GL {
     static void genBuffers(GLsizei n, GLuint *buffers);
     static void bufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
     static void bufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
+
+    // Framebuffers
+    static void bindFramebuffer(GLenum target, GLuint framebuffer);
+    static void genFramebuffers(GLsizei n, GLuint *framebuffers);
+    static void framebufferTexture2D(GLenum target, GLenum attachment,
+                                     GLenum textarget, GLuint texture, GLint level);
+    static void renderbufferStorage(GLenum target, GLenum internalformat,
+                                    GLsizei width, GLsizei height);
+    static void framebufferRenderbuffer(GLenum target, GLenum attachment,
+                                        GLenum renderbuffertarget, GLuint renderbuffer);
+    static void genRenderbuffers(GLsizei n, GLuint *renderbuffers);
+    static void bindRenderbuffer(GLenum target, GLuint renderbuffer);
+    static void deleteFramebuffers(GLsizei n, const GLuint *framebuffers);
+    static void deleteRenderbuffers(GLsizei n, const GLuint *renderbuffers);
+    static GLenum checkFramebufferStatus(GLenum target);
 
     // Texture
     static void bindTexture(GLenum target, GLuint texture );
