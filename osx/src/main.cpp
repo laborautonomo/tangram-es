@@ -94,8 +94,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         if (!marker) {
             marker = map->markerAdd();
             map->markerSetStyling(marker, markerStyling.c_str());
+            map->markerSetPoint(marker, p);
         }
-        map->markerSetPoint(marker, p);
 
         map->pickFeaturesAt(x, y, [](const auto& items) {
             std::string name;
