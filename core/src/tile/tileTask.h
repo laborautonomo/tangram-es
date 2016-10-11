@@ -31,7 +31,11 @@ public:
 
     virtual bool hasData() const { return true; }
 
-    virtual bool isReady() const { return bool(m_tile); }
+    virtual bool isReady() const {
+        if (needsLoading()) { return false; }
+
+        return bool(m_tile);
+    }
 
     std::shared_ptr<Tile>& tile() { return m_tile; }
 
@@ -67,6 +71,23 @@ public:
     // onDone for sub-tasks
     virtual void complete(TileTask& _mainTask) {}
 
+    int rawSource = 0;
+
+    bool needsLoading() const {
+        if (hasData()) { return false; }
+
+        return m_needsLoading;
+
+        //if (m_canceled) return false;
+        // if (m_needsLoading) { return true; }
+        // for (auto& subTask : m_subTasks) {
+        //     if (subTask->needsLoading()) { return true;  }
+        // }
+        // return false;
+    }
+
+    void startedLoading() { m_needsLoading = false; }
+
 protected:
 
     const TileID m_tileId;
@@ -85,6 +106,7 @@ protected:
     std::shared_ptr<Tile> m_tile;
 
     bool m_canceled = false;
+    bool m_needsLoading = true;
 
     std::atomic<float> m_priority;
     bool m_proxyState = false;

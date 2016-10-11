@@ -224,27 +224,18 @@ void TileManager::updateTileSet(TileSet& _tileSet, const ViewState& _view,
                     // Tile needs update - enqueue for loading
                     enqueueTask(_tileSet, visTileId, _view);
                 }
-            } else {
+            } else if ((entry.needsLoading()) ||
+                       (entry.isCanceled() && (entry.task->sourceGeneration() < generation))) {
 
-                if (entry.isLoading() && entry.rastersPending() == 0) {
-                    if (newTiles) {
-                        // check again for proxies
-                        updateProxyTiles(_tileSet, visTileId, entry);
-                    }
-                    m_tilesInProgress++;
-                } else if (!bool(entry.task) ||
-                           (entry.rastersPending() > 0 && !entry.isCanceled()) ||
-                           (entry.isCanceled() && (entry.task->sourceGeneration() < generation))) {
-                    // Start loading when:
-                    // no task is set,
-                    // one of the raster for this task has not been loaded yet
-                    // or the task stems from an older tile source generation.
+                // Not yet available - enqueue for loading
+                enqueueTask(_tileSet, visTileId, _view);
 
-                    // Not yet available - enqueue for loading
-                    enqueueTask(_tileSet, visTileId, _view);
+                m_tilesInProgress++;
+            }
 
-                    m_tilesInProgress++;
-                }
+            if (newTiles && entry.isLoading()) {
+                // check again for proxies
+                updateProxyTiles(_tileSet, visTileId, entry);
             }
 
             ++curTilesIt;
@@ -304,16 +295,15 @@ void TileManager::updateTileSet(TileSet& _tileSet, const ViewState& _view,
     for (auto& it : tiles) {
         auto& entry = it.second;
 
+#if LOG_LEVEL >= 3
         size_t rasterLoading = 0;
         size_t rasterDone = 0;
-
         if (entry.task) {
             for (auto &raster : entry.task->subTasks()) {
                 if (raster->isReady()) { rasterDone++; }
                 else { rasterLoading++; }
             }
         }
-
         DBG("> %s - ready:%d proxy:%d/%d loading:%d rDone:%d rLoading:%d rPending:%d canceled:%d",
              it.first.toString().c_str(),
              entry.isReady(),
@@ -324,6 +314,7 @@ void TileManager::updateTileSet(TileSet& _tileSet, const ViewState& _view,
              rasterLoading,
              entry.rastersPending(),
              entry.task && entry.task->isCanceled());
+#endif
 
         if (entry.isLoading()) {
             auto& id = it.first;
@@ -359,6 +350,7 @@ void TileManager::enqueueTask(TileSet& _tileSet, const TileID& _tileID,
     m_loadTasks.insert(it, std::make_tuple(distance, &_tileSet, _tileID));
 }
 
+#if 0
 // create and download raster references store these
 // rastertasks in this datasource' task
 void TileManager::loadSubTasks(std::vector<std::shared_ptr<DataSource>>& _subSources,
@@ -392,8 +384,11 @@ void TileManager::loadSubTasks(std::vector<std::shared_ptr<DataSource>>& _subSou
         }
     }
 }
+#endif
 
 void TileManager::loadTiles() {
+
+    if (m_loadTasks.empty()) { return; }
 
     for (auto& loadTask : m_loadTasks) {
 
@@ -402,19 +397,7 @@ void TileManager::loadTiles() {
         auto tileIt = tileSet.tiles.find(tileId);
         auto& entry = tileIt->second;
 
-        if (entry.task && entry.rastersPending() > 0 && !entry.isCanceled()) {
-            // just load the rasters and continue,
-            // the main tile task has already started loading
-            loadSubTasks(tileSet.source->rasterSources(), entry.task, tileId);
-            continue;
-        }
-
-        auto task = tileSet.source->createTask(tileId);
-
-        if (tileSet.source->loadTileData(task, m_dataCallback)) {
-            entry.task = task;
-            loadSubTasks(tileSet.source->rasterSources(), entry.task, tileId);
-        }
+        tileSet.source->loadTileData(entry.task, m_dataCallback);
     }
 
     DBG("loading:%d pending:%d cache: %fMB",
@@ -450,6 +433,8 @@ bool TileManager::addTile(TileSet& _tileSet, const TileID& _tileID) {
     if (!tile) {
         // Add Proxy if corresponding proxy MapTile ready
         updateProxyTiles(_tileSet, _tileID, entry.first->second);
+
+        entry.first->second.task = _tileSet.source->createTask(_tileID);
     }
     entry.first->second.setVisible(true);
 

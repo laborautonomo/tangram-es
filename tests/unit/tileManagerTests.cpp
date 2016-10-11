@@ -84,11 +84,10 @@ struct TestDataSource : DataSource {
         m_generateGeometry = true;
     }
 
-    bool loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) override {
+    void loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) override {
         tileTaskCount++;
         static_cast<Task*>(_task.get())->gotData = true;
         _cb.func(std::move(_task));
-        return true;
     }
 
     void cancelLoadingTile(const TileID& _tile) override {}
