@@ -22,10 +22,10 @@ TileManager::TileManager(TileTaskQueue& _tileWorker) : m_workers(_tileWorker) {
     // Callback to pass task from Download-Thread to Worker-Queue
     m_dataCallback = TileTaskCb{[this](std::shared_ptr<TileTask>&& task) {
 
-         if (task->isReady()) {
+        if (task->isReady()) {
              requestRender();
 
-        } else if (task->hasData() || task->source().hasMBTiles()) {
+        } else if (task->hasData()) { //} || task->source().hasMBTiles()) {
             m_workers.enqueue(std::move(task));
 
         } else {
