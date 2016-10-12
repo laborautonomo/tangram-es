@@ -272,7 +272,7 @@ osx: ${OSX_BUILD_DIR}/Makefile
 ${OSX_BUILD_DIR}/Makefile: cmake-osx
 
 xcode: ${OSX_XCODE_BUILD_DIR}/${OSX_XCODE_PROJ}
-	xcodebuild -target ${OSX_TARGET} -project ${OSX_XCODE_BUILD_DIR}/${OSX_XCODE_PROJ}
+	xcodebuild -target ${OSX_TARGET} -project ${OSX_XCODE_BUILD_DIR}/${OSX_XCODE_PROJ} | xcpretty
 
 ${OSX_XCODE_BUILD_DIR}/${OSX_XCODE_PROJ}: cmake-xcode
 
@@ -287,7 +287,7 @@ cmake-osx:
 	cmake ../.. ${DARWIN_CMAKE_PARAMS}
 
 ios: ${IOS_BUILD_DIR}/${IOS_XCODE_PROJ}
-	xcodebuild -target ${IOS_TARGET} -project ${IOS_BUILD_DIR}/${IOS_XCODE_PROJ}
+	xcodebuild -target ${IOS_TARGET} -project ${IOS_BUILD_DIR}/${IOS_XCODE_PROJ} | xcpretty
 
 ${IOS_BUILD_DIR}/${IOS_XCODE_PROJ}: cmake-ios
 
@@ -302,10 +302,10 @@ cmake-ios-framework:
 	cmake ../.. ${IOS_FRAMEWORK_CMAKE_PARAMS}
 
 ios-framework: cmake-ios-framework
-	xcodebuild -target ${IOS_FRAMEWORK_TARGET} -project ${IOS_FRAMEWORK_BUILD_DIR}/${IOS_FRAMEWORK_XCODE_PROJ}
+	xcodebuild -target ${IOS_FRAMEWORK_TARGET} -project ${IOS_FRAMEWORK_BUILD_DIR}/${IOS_FRAMEWORK_XCODE_PROJ} | xcpretty
 
 ios-sim: ${IOS_SIM_BUILD_DIR}/${IOS_XCODE_PROJ}
-	xcodebuild -target ${IOS_TARGET} -project ${IOS_SIM_BUILD_DIR}/${IOS_XCODE_PROJ}
+	xcodebuild -target ${IOS_TARGET} -project ${IOS_SIM_BUILD_DIR}/${IOS_XCODE_PROJ} | xcpretty
 
 ${IOS_SIM_BUILD_DIR}/${IOS_XCODE_PROJ}: cmake-ios-sim
 
