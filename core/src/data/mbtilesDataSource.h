@@ -9,6 +9,7 @@ class Database;
 namespace Tangram {
 
 struct MBTilesQueries;
+class AsyncWorker;
 
 class MBTilesDataSource : public RawDataSource {
 public:
@@ -23,6 +24,7 @@ public:
 private:
     bool getTileData(const TileID& _tileId, std::vector<char>& _data);
     void storeTileData(const TileID& _tileId, const std::vector<char>& _data);
+    void removePending(const TileID& _tileId);
 
     void setupMBTiles();
     void initMBTilesSchema(SQLite::Database& db, std::string _name, std::string _mimeType);
@@ -36,8 +38,12 @@ private:
     // Pointer to SQLite DB of MBTiles store
     std::unique_ptr<SQLite::Database> m_db;
     std::unique_ptr<MBTilesQueries> m_queries;
+    std::unique_ptr<AsyncWorker> m_worker;
 
-    std::mutex m_mutex;
+    std::mutex m_queueMutex;
+
+    std::vector<TileID> m_pending;
+
 };
 
 }

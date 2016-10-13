@@ -1,9 +1,11 @@
 #include "data/mbtilesDataSource.h"
 
+#include "util/asyncWorker.h"
 #include "log.h"
 
 #include <SQLiteCpp/Database.h>
 #include "hash-library/md5.cpp"
+
 
 namespace Tangram {
 
@@ -113,6 +115,8 @@ struct MBTilesQueries {
 MBTilesDataSource::MBTilesDataSource(std::string _name, std::string _path, std::string _mime)
     : m_name(_name), m_path(_path), m_mime(_mime) {
 
+    m_worker = std::make_unique<AsyncWorker>();
+
     setupMBTiles();
 }
 
@@ -120,42 +124,69 @@ MBTilesDataSource::~MBTilesDataSource() {
     // TODO teardown db?
 }
 
-bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
+void MBTilesDataSource::removePending(const TileID& _tileId) {
+    std::unique_lock<std::mutex> lock(m_queueMutex);
+    auto it = std::find(m_pending.begin(), m_pending.end(), _tileId);
+    if (it != m_pending.end()) { m_pending.erase(it); }
+}
 
-    auto& task = static_cast<DownloadTileTask&>(*_task);
+bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
 
     if (_task->rawSource == this->level) {
 
-        // TODO: Async loading!
-
         TileID tileId = _task->tileId();
 
-        task.rawTileData = std::make_shared<std::vector<char>>();
-
-        getTileData(tileId, *task.rawTileData);
-
-        if (task.hasData()) {
-            LOGW("loaded tile: %s, %d", tileId.toString().c_str(), task.rawTileData->size());
-
-            _cb.func(_task);
-            return true;
+        {
+            std::unique_lock<std::mutex> lock(m_queueMutex);
+            if (std::find(m_pending.begin(), m_pending.end(), tileId) != m_pending.end()) {
+                return false;
+            }
+            m_pending.push_back(tileId);
         }
 
-        // Don't try this source again
-        if (next) { _task->rawSource = next->level; }
+        m_worker->enqueue([this, _task, _cb](){
+                TileID tileId = _task->tileId();
+
+                auto& task = static_cast<DownloadTileTask&>(*_task);
+                task.rawTileData = std::make_shared<std::vector<char>>();
+
+                getTileData(tileId, *task.rawTileData);
+
+                if (task.hasData()) {
+                    LOGW("loaded tile: %s, %d", tileId.toString().c_str(), task.rawTileData->size());
+
+                    _cb.func(_task);
+
+                } else if (next) {
+                    // TODO _task->needsLoading(true);
+
+                    // Don't try this source again
+                    _task->rawSource = next->level;
+                    // Trigger TileManager update so that tile will be downloaded
+                    // next time.
+                    requestRender();
+                }
+
+                removePending(tileId);
+            });
+
+        return false;
     }
 
     if (next) {
         TileTaskCb cb{[this, _cb](std::shared_ptr<TileTask> _task) {
 
-                auto& task = static_cast<DownloadTileTask&>(*_task);
-                TileID tileId = _task->tileId();
+                m_worker->enqueue([this, _task](){
 
-                LOGW("store tile: %s, %d", tileId.toString().c_str(), task.hasData());
+                        auto& task = static_cast<DownloadTileTask&>(*_task);
+                        TileID tileId = _task->tileId();
 
-                //if (task.hasData()) {
-                storeTileData(tileId, *task.rawTileData);
-                //}
+                        LOGW("store tile: %s, %d", tileId.toString().c_str(), task.hasData());
+
+                        //if (task.hasData()) {
+                        storeTileData(tileId, *task.rawTileData);
+                        //}
+                    });
 
                 _cb.func(_task);
 
@@ -286,8 +317,6 @@ bool MBTilesDataSource::getTileData(const TileID& _tileId, std::vector<char>& _d
         int z = _tileId.z;
         int y = (1 << z) - 1 - _tileId.y;
 
-        std::lock_guard<std::mutex> lock(m_mutex);
-
         auto& stmt = m_queries->getTileData;
         stmt.bind(1, z);
         stmt.bind(2, _tileId.x);
@@ -327,8 +356,6 @@ void MBTilesDataSource::storeTileData(const TileID& _tileId, const std::vector<c
      */
     MD5 md5;
     std::string md5id = md5(data, size);
-
-    std::lock_guard<std::mutex> lock(m_mutex);
 
     try {
         auto& stmt = m_queries->putMap;
