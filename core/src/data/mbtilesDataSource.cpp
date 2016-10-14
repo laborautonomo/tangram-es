@@ -124,78 +124,65 @@ MBTilesDataSource::~MBTilesDataSource() {
     // TODO teardown db?
 }
 
-void MBTilesDataSource::removePending(const TileID& _tileId) {
-    std::unique_lock<std::mutex> lock(m_queueMutex);
-    auto it = std::find(m_pending.begin(), m_pending.end(), _tileId);
-    if (it != m_pending.end()) { m_pending.erase(it); }
-}
-
 bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
 
     if (_task->rawSource == this->level) {
 
-        TileID tileId = _task->tileId();
-
-        {
-            std::unique_lock<std::mutex> lock(m_queueMutex);
-            if (std::find(m_pending.begin(), m_pending.end(), tileId) != m_pending.end()) {
-                return false;
-            }
-            m_pending.push_back(tileId);
-        }
-
         m_worker->enqueue([this, _task, _cb](){
-                TileID tileId = _task->tileId();
+            TileID tileId = _task->tileId();
 
-                auto& task = static_cast<DownloadTileTask&>(*_task);
-                task.rawTileData = std::make_shared<std::vector<char>>();
+            auto& task = static_cast<DownloadTileTask&>(*_task);
+            task.rawTileData = std::make_shared<std::vector<char>>();
 
-                getTileData(tileId, *task.rawTileData);
+            getTileData(tileId, *task.rawTileData);
 
-                if (task.hasData()) {
-                    LOGW("loaded tile: %s, %d", tileId.toString().c_str(), task.rawTileData->size());
-
-                    _cb.func(_task);
-
-                } else if (next) {
-                    // TODO _task->needsLoading(true);
-
-                    // Don't try this source again
-                    _task->rawSource = next->level;
-                    // Trigger TileManager update so that tile will be downloaded
-                    // next time.
-                    requestRender();
-                }
-
-                removePending(tileId);
-            });
-
-        return false;
-    }
-
-    if (next) {
-        TileTaskCb cb{[this, _cb](std::shared_ptr<TileTask> _task) {
-
-                m_worker->enqueue([this, _task](){
-
-                        auto& task = static_cast<DownloadTileTask&>(*_task);
-                        TileID tileId = _task->tileId();
-
-                        LOGW("store tile: %s, %d", tileId.toString().c_str(), task.hasData());
-
-                        //if (task.hasData()) {
-                        storeTileData(tileId, *task.rawTileData);
-                        //}
-                    });
+            if (task.hasData()) {
+                // LOGW("loaded tile: %s, %d", tileId.toString().c_str(), task.rawTileData->size());
 
                 _cb.func(_task);
 
-            }};
+            } else if (next) {
 
-        return next->loadTileData(_task, cb);
+                // Don't try this source again
+                _task->rawSource = next->level;
+
+                if (!loadNextSource(_task, _cb)) {
+                    // Trigger TileManager update so that tile will be
+                    // downloaded next time.
+                    _task->setNeedsLoading(true);
+                    requestRender();
+                }
+            }
+        });
+        return true;
     }
 
-    return false;
+    return loadNextSource(_task, _cb);
+}
+
+bool MBTilesDataSource::loadNextSource(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
+    if (!next) { return false; }
+
+    // Intercept TileTaskCb to store result from next source.
+    TileTaskCb cb{[this, _cb](std::shared_ptr<TileTask> _task) {
+
+        m_worker->enqueue([this, _task](){
+
+            auto& task = static_cast<DownloadTileTask&>(*_task);
+            TileID tileId = _task->tileId();
+
+            //LOGW("store tile: %s, %d", tileId.toString().c_str(), task.hasData());
+
+            if (task.hasData()) {
+                storeTileData(tileId, *task.rawTileData);
+            }
+        });
+
+        _cb.func(_task);
+
+    }};
+
+    return next->loadTileData(_task, cb);
 }
 
 void MBTilesDataSource::setupMBTiles() {

@@ -24,7 +24,7 @@ public:
 private:
     bool getTileData(const TileID& _tileId, std::vector<char>& _data);
     void storeTileData(const TileID& _tileId, const std::vector<char>& _data);
-    void removePending(const TileID& _tileId);
+    bool loadNextSource(std::shared_ptr<TileTask> _task, TileTaskCb _cb);
 
     void setupMBTiles();
     void initMBTilesSchema(SQLite::Database& db, std::string _name, std::string _mimeType);
@@ -39,11 +39,6 @@ private:
     std::unique_ptr<SQLite::Database> m_db;
     std::unique_ptr<MBTilesQueries> m_queries;
     std::unique_ptr<AsyncWorker> m_worker;
-
-    std::mutex m_queueMutex;
-
-    std::vector<TileID> m_pending;
-
 };
 
 }
