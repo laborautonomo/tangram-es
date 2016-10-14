@@ -898,11 +898,18 @@ void SceneLoader::loadSource(const std::string& name, const Node& source, const 
     }
 
     std::string type = source["type"].Scalar();
-    std::string url = source["url"].Scalar();
+    std::string url;
+    std::string mbtiles;
     int32_t minDisplayZoom = -1;
     int32_t maxDisplayZoom = -1;
     int32_t maxZoom = 18;
 
+    if (auto urlNode = source["url"]) {
+        url = urlNode.Scalar();
+    }
+    if (auto mbtilesNode = source["mbtiles"]) {
+        mbtiles = mbtilesNode.Scalar();
+    }
     if (auto minDisplayZoomNode = source["min_display_zoom"]) {
         minDisplayZoom = minDisplayZoomNode.as<int32_t>(minDisplayZoom);
     }
@@ -940,14 +947,23 @@ void SceneLoader::loadSource(const std::string& name, const Node& source, const 
     }
 
     // distinguish tiled and non-tiled sources by url
-    bool tiled = url.find("{x}") != std::string::npos &&
+    bool tiled = url.size() > 0 &&
+        url.find("{x}") != std::string::npos &&
         url.find("{y}") != std::string::npos &&
         url.find("{z}") != std::string::npos;
+
 
     std::shared_ptr<DataSource> sourcePtr;
 
     auto rawSources = std::make_unique<MemoryCacheDataSource>();
     rawSources->setCacheSize(CACHE_SIZE);
+
+    if (mbtiles.size() > 0) {
+        // If we have MBTiles, we know the source is tiled.
+        tiled = true;
+
+        //rawSources->setNext(std::make_unique<MBTilesDataSource>(mbtiles));
+    }
 
     if (type == "GeoJSON") {
         if (tiled) {

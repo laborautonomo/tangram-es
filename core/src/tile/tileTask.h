@@ -122,6 +122,8 @@ public:
     }
     // Raw tile data that will be processed by DataSource.
     std::shared_ptr<std::vector<char>> rawTileData;
+
+    bool dataFromCache = false;
 };
 
 struct TileTaskQueue {

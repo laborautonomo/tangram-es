@@ -51,6 +51,11 @@ public:
 
     virtual ~DataSource();
 
+    /**
+     * @return the mime-type of the DataSource.
+     */
+    virtual const char* mimeType() = 0;
+
     /* Fetches data for the map tile specified by @_tileID
      *
      * LoadTile starts an asynchronous I/O task to retrieve the data for a tile. When
@@ -131,7 +136,6 @@ protected:
     std::vector<std::shared_ptr<DataSource>> m_rasterSources;
 
     std::unique_ptr<RawDataSource> m_sources;
-
 };
 
 }
