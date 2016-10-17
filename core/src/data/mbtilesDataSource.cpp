@@ -128,8 +128,10 @@ MBTilesDataSource::~MBTilesDataSource() {
 bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
 
     if (m_offlineMode) {
-        // Try next source
-        _task->rawSource = next->level;
+        if (_task->rawSource == this->level) {
+            // Try next source
+            _task->rawSource = next->level;
+        }
 
         return loadNextSource(_task, _cb);
     }
