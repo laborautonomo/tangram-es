@@ -112,8 +112,9 @@ struct MBTilesQueries {
 
 };
 
-MBTilesDataSource::MBTilesDataSource(std::string _name, std::string _path, std::string _mime)
-    : m_name(_name), m_path(_path), m_mime(_mime) {
+MBTilesDataSource::MBTilesDataSource(std::string _name, std::string _path,
+                                     std::string _mime, bool _offlineCache)
+    : m_name(_name), m_path(_path), m_mime(_mime), m_offlineMode(_offlineCache) {
 
     m_worker = std::make_unique<AsyncWorker>();
 
@@ -126,6 +127,13 @@ MBTilesDataSource::~MBTilesDataSource() {
 
 bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
 
+    if (m_offlineMode) {
+        // Try next source
+        _task->rawSource = next->level;
+
+        return loadNextSource(_task, _cb);
+    }
+
     if (_task->rawSource == this->level) {
 
         m_worker->enqueue([this, _task, _cb](){
@@ -137,7 +145,7 @@ bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb
             getTileData(tileId, *task.rawTileData);
 
             if (task.hasData()) {
-                // LOGW("loaded tile: %s, %d", tileId.toString().c_str(), task.rawTileData->size());
+                LOGW("loaded tile: %s, %d", tileId.toString().c_str(), task.rawTileData->size());
 
                 _cb.func(_task);
 
@@ -166,20 +174,37 @@ bool MBTilesDataSource::loadNextSource(std::shared_ptr<TileTask> _task, TileTask
     // Intercept TileTaskCb to store result from next source.
     TileTaskCb cb{[this, _cb](std::shared_ptr<TileTask> _task) {
 
-        m_worker->enqueue([this, _task](){
+        if (_task->hasData()) {
 
-            auto& task = static_cast<DownloadTileTask&>(*_task);
-            TileID tileId = _task->tileId();
+            m_worker->enqueue([this, _task](){
 
-            //LOGW("store tile: %s, %d", tileId.toString().c_str(), task.hasData());
+                auto& task = static_cast<DownloadTileTask&>(*_task);
 
-            if (task.hasData()) {
-                storeTileData(tileId, *task.rawTileData);
-            }
-        });
+                LOGW("store tile: %s, %d", _task->tileId().toString().c_str(), task.hasData());
 
-        _cb.func(_task);
+                storeTileData(_task->tileId(), *task.rawTileData);
+            });
+            _cb.func(_task);
 
+        } else if (m_offlineMode) {
+            LOGW("try fallback tile: %s, %d", _task->tileId().toString().c_str());
+
+            m_worker->enqueue([this, _task, _cb](){
+
+                auto& task = static_cast<DownloadTileTask&>(*_task);
+                task.rawTileData = std::make_shared<std::vector<char>>();
+
+                getTileData(_task->tileId(), *task.rawTileData);
+
+                LOGW("loaded tile: %s, %d", _task->tileId().toString().c_str(), task.rawTileData->size());
+
+                _cb.func(_task);
+
+            });
+        } else {
+            LOGW("missing tile: %s, %d", _task->tileId().toString().c_str());
+            _cb.func(_task);
+        }
     }};
 
     return next->loadTileData(_task, cb);

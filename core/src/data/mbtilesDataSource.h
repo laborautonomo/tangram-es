@@ -14,7 +14,9 @@ class AsyncWorker;
 class MBTilesDataSource : public RawDataSource {
 public:
 
-    MBTilesDataSource(std::string _name, std::string _path, std::string _mime);
+    MBTilesDataSource(std::string _name, std::string _path, std::string _mime,
+                      bool _offlineCache = false);
+
     ~MBTilesDataSource();
 
     bool loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) override;
@@ -34,6 +36,9 @@ private:
     // The path to an mbtiles tile store.
     std::string m_path;
     std::string m_mime;
+
+    // Offline fallback: Try download (next source) first, then fall back to mbtiles
+    bool m_offlineMode = true;
 
     // Pointer to SQLite DB of MBTiles store
     std::unique_ptr<SQLite::Database> m_db;

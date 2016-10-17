@@ -978,9 +978,10 @@ void SceneLoader::loadSource(const std::string& name, const Node& source, const 
         // If we have MBTiles, we know the source is tiled.
         tiled = true;
 
-        rawSources->setNext(std::make_unique<MBTilesDataSource>(name, mbtiles, mime));
-
-        if (!url.empty()) {
+        if (url.empty()) {
+            rawSources->setNext(std::make_unique<MBTilesDataSource>(name, mbtiles, mime, false));
+        } else {
+            rawSources->setNext(std::make_unique<MBTilesDataSource>(name, mbtiles, mime, true));
             rawSources->next->setNext(std::make_unique<NetworkDataSource>(url));
         }
 
