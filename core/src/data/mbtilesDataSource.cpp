@@ -134,6 +134,8 @@ bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb
         return loadNextSource(_task, _cb);
     }
 
+    if (!m_db) { return false; }
+
     if (_task->rawSource == this->level) {
 
         m_worker->enqueue([this, _task, _cb](){
@@ -170,6 +172,10 @@ bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb
 
 bool MBTilesDataSource::loadNextSource(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
     if (!next) { return false; }
+
+    if (!m_db) {
+        return next->loadTileData(_task, _cb);
+    }
 
     // Intercept TileTaskCb to store result from next source.
     TileTaskCb cb{[this, _cb](std::shared_ptr<TileTask> _task) {
