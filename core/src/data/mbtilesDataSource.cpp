@@ -1,6 +1,7 @@
 #include "data/mbtilesDataSource.h"
 
 #include "util/asyncWorker.h"
+#include "util/inflateBuffer.h"
 #include "log.h"
 
 #include <SQLiteCpp/Database.h>
@@ -219,19 +220,24 @@ bool MBTilesDataSource::loadNextSource(std::shared_ptr<TileTask> _task, TileTask
 }
 
 void MBTilesDataSource::setupMBTiles() {
-    // If we have a path to an MBTiles file, try to open up a SQLite database
-    // instance.
     try {
-        // Need to explicitly open a SQLite DB with OPEN_READWRITE and
-        // OPEN_CREATE flags to make a file and write.
-        m_db = std::make_unique<SQLite::Database>(m_path,
-                                                  SQLite::OPEN_READWRITE |
-                                                  SQLite::OPEN_CREATE);
+
+        auto mode = SQLite::OPEN_READONLY;
+
+        if (m_offlineMode) {
+            // Need to explicitly open a SQLite DB with OPEN_READWRITE
+            // and OPEN_CREATE flags to make a file and write.
+            mode = SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE;
+        }
+
+        m_db = std::make_unique<SQLite::Database>(m_path, mode);
 
         LOG("MBTiles SQLite DB Opened at: %s", m_path.c_str());
 
-        // If needed, setup the database by running the schema.sql.
-        initMBTilesSchema(*m_db, m_name, m_mime);
+        if (m_offlineMode) {
+            // If needed, setup the database by running the schema.sql.
+            initMBTilesSchema(*m_db, m_name, m_mime);
+        }
 
         m_queries = std::make_unique<MBTilesQueries>(*m_db);
 
@@ -330,6 +336,8 @@ void MBTilesDataSource::initMBTilesSchema(SQLite::Database& db, std::string _nam
 }
 
 bool MBTilesDataSource::getTileData(const TileID& _tileId, std::vector<char>& _data) {
+
+    auto& stmt = m_queries->getTileData;
     try {
         // Google TMS to WMTS
         // https://github.com/mapbox/node-mbtiles/blob/
@@ -337,7 +345,6 @@ bool MBTilesDataSource::getTileData(const TileID& _tileId, std::vector<char>& _d
         int z = _tileId.z;
         int y = (1 << z) - 1 - _tileId.y;
 
-        auto& stmt = m_queries->getTileData;
         stmt.bind(1, z);
         stmt.bind(2, _tileId.x);
         stmt.bind(3, y);
@@ -346,18 +353,24 @@ bool MBTilesDataSource::getTileData(const TileID& _tileId, std::vector<char>& _d
             SQLite::Column column = stmt.getColumn(0);
             const char* blob = (const char*) column.getBlob();
             const int length = column.getBytes();
-            _data.resize(length);
-            memcpy(_data.data(), blob, length);
+
+            // OSM2Vectiles does not contain a 'compression' field
+            // Try deflate by default..
+            if (inflate(blob, length, _data) != 0) {
+                _data.resize(length);
+                memcpy(_data.data(), blob, length);
+            }
 
             stmt.reset();
             return true;
         }
 
-        stmt.reset();
-
     } catch (std::exception& e) {
         LOGE("MBTiles SQLite get tile_data statement failed: %s", e.what());
     }
+    try {
+        stmt.reset();
+    } catch(...) {}
 
     return false;
 }
