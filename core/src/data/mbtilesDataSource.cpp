@@ -106,10 +106,10 @@ struct MBTilesQueries {
     // REPLACE INTO statement in images table
     SQLite::Statement putImage;
 
-    MBTilesQueries(SQLite::Database& _db)
+    MBTilesQueries(SQLite::Database& _db, bool _offline)
         : getTileData(_db, "SELECT tile_data FROM tiles WHERE zoom_level = ? AND tile_column = ? AND tile_row = ?;"),
-          putMap(_db, "REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES (?, ?, ?, ?);" ),
-          putImage(_db, "REPLACE INTO images (tile_id, tile_data) VALUES (?, ?);" ) {}
+          putMap(_db, _offline ? "REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES (?, ?, ?, ?);" : "SELECT 1;" ),
+          putImage(_db, _offline ? "REPLACE INTO images (tile_id, tile_data) VALUES (?, ?);" : "SELECT 1;") {}
 
 };
 
@@ -165,6 +165,8 @@ bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb
                     _task->setNeedsLoading(true);
                     requestRender();
                 }
+            } else {
+                LOGW("missing tile: %s, %d", _task->tileId().toString().c_str());
             }
         });
         return true;
@@ -239,7 +241,7 @@ void MBTilesDataSource::setupMBTiles() {
             initMBTilesSchema(*m_db, m_name, m_mime);
         }
 
-        m_queries = std::make_unique<MBTilesQueries>(*m_db);
+        m_queries = std::make_unique<MBTilesQueries>(*m_db, m_offlineMode);
 
     } catch (std::exception& e) {
         LOGE("Unable to open SQLite database: %s", e.what());

@@ -24,7 +24,8 @@ cameras:
         active: false
     perspective-camera:
         # Winters
-        position: [-121.97, 38.52, 12]
+        #position: [-121.97, 38.52, 12]
+        position: [-74.00976419448854, 40.70532700869127, 16]
         type: perspective
         fov: 45
         max_tilt: [[2, 0], [16, 90]]
@@ -88,7 +89,7 @@ sources:
     osm:
         type: MVT
         #url:  https://vector.mapzen.com/osm/all/{z}/{x}/{y}.json
-        mbtiles: planet.mbtiles
+        mbtiles: nyc.mbtiles
         max_zoom: 16
         # url_params:
         #     api_key: vector-tiles-tyHL4AY
