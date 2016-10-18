@@ -11,6 +11,8 @@
 #import <GLKit/GLKit.h>
 #import "TGMapViewDelegate.h"
 
+@class TGMapMarker;
+
 typedef NS_ENUM(NSInteger, TGCameraType) {
     TGCameraTypePerspective = 0,
     TGCameraTypeIsometric,
@@ -28,6 +30,8 @@ typedef struct {
     double longitude;
     double latitude;
 } TGGeoPoint;
+
+typedef uint32_t TGMapMarkerId;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -57,17 +61,33 @@ struct TileID;
 @property (assign, nonatomic) float rotation;
 @property (assign, nonatomic) float tilt;
 
+NS_ASSUME_NONNULL_BEGIN
+
 - (void)renderOnce;
 
-NS_ASSUME_NONNULL_BEGIN
+- (void)markerRemoveAll;
+
+- (TGMapMarkerId)markerAdd;
+
+- (BOOL)markerSetStyling:(TGMapMarkerId)identifier styling:(NSString *)styling;
+
+- (BOOL)markerSetPoint:(TGMapMarkerId)identifier coordinates:(TGGeoPoint)coordinate;
+
+- (BOOL)markerSetPointEased:(TGMapMarkerId)identifier coordinates:(TGGeoPoint)coordinate duration:(float)duration easeType:(TGEaseType)ease;
+
+- (BOOL)markerSetPolyline:(TGMapMarkerId)identifier coordinates:(TGGeoPoint *)coordinates count:(int)count;
+
+- (BOOL)markerSetPolygon:(TGMapMarkerId)identifier coordinates:(TGGeoPoint *)coordinates count:(int)count rings:(int)rings;
+
+- (BOOL)markerSetVisible:(TGMapMarkerId)identifier visible:(BOOL)visible;
+
+- (BOOL)markerRemove:(TGMapMarkerId)marker;
 
 - (void)loadSceneFile:(NSString*)path;
 
 - (void)loadSceneFileAsync:(NSString*)path;
 
 - (void)queueSceneUpdate:(NSString*)componentPath withValue:(NSString*)value;
-
-NS_ASSUME_NONNULL_END
 
 - (void)pickFeaturesAt:(CGPoint)screenPosition;
 
@@ -92,5 +112,7 @@ NS_ASSUME_NONNULL_END
 - (void)animateToTilt:(float)radians withDuration:(float)seconds;
 
 - (void)animateToTilt:(float)radians withDuration:(float)seconds withEaseType:(TGEaseType)easeType;
+
+NS_ASSUME_NONNULL_END
 
 @end
