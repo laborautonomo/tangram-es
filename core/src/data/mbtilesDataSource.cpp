@@ -15,7 +15,7 @@ namespace Tangram {
  *
  * https://github.com/mapbox/node-mbtiles/blob/4bbfaf991969ce01c31b95184c4f6d5485f717c3/lib/schema.sql
  */
-const char* SCHEMA = R"SQL_ESC(BEGIN;
+static const char* SCHEMA = R"SQL_ESC(BEGIN;
 
 CREATE TABLE IF NOT EXISTS map (
    zoom_level INTEGER,
