@@ -44,6 +44,7 @@ set(FRAMEWORK_HEADERS
 
 set(HEADERS
     ${PROJECT_SOURCE_DIR}/ios/src/platform_ios.h
+    ${PROJECT_SOURCE_DIR}/ios/src/Helpers.h
     ${FRAMEWORK_HEADERS})
 
 add_bundle_resources(RESOURCES "${PROJECT_SOURCE_DIR}/scenes/fonts" "./fonts")
