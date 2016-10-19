@@ -1,4 +1,4 @@
-#include "inflateBuffer.h"
+#include "zlibHelper.h"
 
 #include <zlib.h>
 
@@ -7,6 +7,7 @@
 #define CHUNK 16384
 
 namespace Tangram {
+namespace zlib {
 
 int inflate(const char* _data, size_t _size, std::vector<char>& dst) {
 
@@ -51,4 +52,5 @@ int inflate(const char* _data, size_t _size, std::vector<char>& dst) {
     return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
 }
 
+}
 }

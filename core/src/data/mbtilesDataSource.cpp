@@ -1,7 +1,7 @@
 #include "data/mbtilesDataSource.h"
 
 #include "util/asyncWorker.h"
-#include "util/inflateBuffer.h"
+#include "util/zlibHelper.h"
 #include "log.h"
 
 #include <SQLiteCpp/Database.h>
@@ -358,7 +358,7 @@ bool MBTilesDataSource::getTileData(const TileID& _tileId, std::vector<char>& _d
 
             // OSM2Vectiles does not contain a 'compression' field
             // Try deflate by default..
-            if (inflate(blob, length, _data) != 0) {
+            if (zlib::inflate(blob, length, _data) != 0) {
                 _data.resize(length);
                 memcpy(_data.data(), blob, length);
             }
