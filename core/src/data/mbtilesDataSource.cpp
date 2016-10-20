@@ -50,11 +50,11 @@ CREATE TABLE IF NOT EXISTS metadata (
     value text
 );
 
-CREATE TABLE IF NOT EXISTS geocoder_data (
-    type TEXT,
-    shard INTEGER,
-    data BLOB
-);
+-- CREATE TABLE IF NOT EXISTS geocoder_data (
+--     type TEXT,
+--     shard INTEGER,
+--     data BLOB
+-- );
 
 CREATE UNIQUE INDEX IF NOT EXISTS map_index ON map (zoom_level, tile_column, tile_row);
 CREATE UNIQUE INDEX IF NOT EXISTS grid_key_lookup ON grid_key (grid_id, key_name);
@@ -63,8 +63,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS grid_utfgrid_lookup ON grid_utfgrid (grid_id);
 CREATE UNIQUE INDEX IF NOT EXISTS images_id ON images (tile_id);
 CREATE UNIQUE INDEX IF NOT EXISTS name ON metadata (name);
 CREATE INDEX IF NOT EXISTS map_grid_id ON map (grid_id);
-CREATE INDEX IF NOT EXISTS geocoder_type_index ON geocoder_data (type);
-CREATE UNIQUE INDEX IF NOT EXISTS geocoder_shard_index ON geocoder_data (type, shard);
+-- CREATE INDEX IF NOT EXISTS geocoder_type_index ON geocoder_data (type);
+-- CREATE UNIQUE INDEX IF NOT EXISTS geocoder_shard_index ON geocoder_data (type, shard);
 
 CREATE VIEW IF NOT EXISTS tiles AS
     SELECT
@@ -106,24 +106,27 @@ struct MBTilesQueries {
     // REPLACE INTO statement in images table
     SQLite::Statement putImage;
 
-    MBTilesQueries(SQLite::Database& _db, bool _offline)
+    MBTilesQueries(SQLite::Database& _db, bool _cache)
         : getTileData(_db, "SELECT tile_data FROM tiles WHERE zoom_level = ? AND tile_column = ? AND tile_row = ?;"),
-          putMap(_db, _offline ? "REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES (?, ?, ?, ?);" : "SELECT 1;" ),
-          putImage(_db, _offline ? "REPLACE INTO images (tile_id, tile_data) VALUES (?, ?);" : "SELECT 1;") {}
+          putMap(_db, _cache ? "REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES (?, ?, ?, ?);" : ";" ),
+          putImage(_db, _cache ? "REPLACE INTO images (tile_id, tile_data) VALUES (?, ?);" : ";") {}
 
 };
 
 MBTilesDataSource::MBTilesDataSource(std::string _name, std::string _path,
-                                     std::string _mime, bool _offlineCache)
-    : m_name(_name), m_path(_path), m_mime(_mime), m_offlineMode(_offlineCache) {
+                                     std::string _mime, bool _cache, bool _offlineFallback)
+    : m_name(_name),
+      m_path(_path),
+      m_mime(_mime),
+      m_cacheMode(_cache),
+      m_offlineMode(_offlineFallback) {
 
     m_worker = std::make_unique<AsyncWorker>();
 
-    setupMBTiles();
+    openMBTiles();
 }
 
 MBTilesDataSource::~MBTilesDataSource() {
-    // TODO teardown db?
 }
 
 bool MBTilesDataSource::loadTileData(std::shared_ptr<TileTask> _task, TileTaskCb _cb) {
@@ -187,14 +190,17 @@ bool MBTilesDataSource::loadNextSource(std::shared_ptr<TileTask> _task, TileTask
 
         if (_task->hasData()) {
 
-            m_worker->enqueue([this, _task](){
+            if (m_cacheMode) {
+                m_worker->enqueue([this, _task](){
 
-                auto& task = static_cast<DownloadTileTask&>(*_task);
+                        auto& task = static_cast<DownloadTileTask&>(*_task);
 
-                LOGW("store tile: %s, %d", _task->tileId().toString().c_str(), task.hasData());
+                        LOGW("store tile: %s, %d", _task->tileId().toString().c_str(), task.hasData());
 
-                storeTileData(_task->tileId(), *task.rawTileData);
-            });
+                        storeTileData(_task->tileId(), *task.rawTileData);
+                    });
+            }
+
             _cb.func(_task);
 
         } else if (m_offlineMode) {
@@ -221,73 +227,142 @@ bool MBTilesDataSource::loadNextSource(std::shared_ptr<TileTask> _task, TileTask
     return next->loadTileData(_task, cb);
 }
 
-void MBTilesDataSource::setupMBTiles() {
+void MBTilesDataSource::openMBTiles() {
+
     try {
-
         auto mode = SQLite::OPEN_READONLY;
-
-        if (m_offlineMode) {
+        if (m_cacheMode) {
             // Need to explicitly open a SQLite DB with OPEN_READWRITE
             // and OPEN_CREATE flags to make a file and write.
             mode = SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE;
         }
 
         m_db = std::make_unique<SQLite::Database>(m_path, mode);
-
-        LOG("MBTiles SQLite DB Opened at: %s", m_path.c_str());
-
-        if (m_offlineMode) {
-            // If needed, setup the database by running the schema.sql.
-            initMBTilesSchema(*m_db, m_name, m_mime);
-        }
-
-        m_queries = std::make_unique<MBTilesQueries>(*m_db, m_offlineMode);
+        LOG("SQLite database opened: %s", m_path.c_str());
 
     } catch (std::exception& e) {
-        LOGE("Unable to open SQLite database: %s", e.what());
-
+        LOGE("Unable to open SQLite database: %s - %s", m_path.c_str(), e.what());
         m_db.reset();
         return;
     }
 
-    LOGN("Opened SQLite database: %s", m_path.c_str());
+    bool ok = testSchema(*m_db);
+    if (ok) {
+        if (m_cacheMode && !m_schemaOptions.isCache) {
+            // TODO better description
+            LOGE("Cannot cache to 'externally created' MBTiles database");
+            // Run in non-caching mode
+            m_cacheMode = false;
+            return;
+        }
+    } else if (m_cacheMode) {
+
+        // Setup the database by running the schema.sql.
+        initSchema(*m_db, m_name, m_mime);
+
+        ok = testSchema(*m_db);
+        if (!ok) {
+            LOGE("Unable to initialize MBTiles schema");
+            m_db.reset();
+            return;
+        }
+    } else {
+        LOGE("Invalid MBTiles schema");
+        m_db.reset();
+        return;
+    }
+
+    if (m_schemaOptions.compression == Compression::unsupported) {
+        m_db.reset();
+        return;
+    }
+
+    try {
+        m_queries = std::make_unique<MBTilesQueries>(*m_db, m_cacheMode);
+    } catch (std::exception& e) {
+        LOGE("Unable to initialize queries: %s", e.what());
+        m_db.reset();
+        return;
+    }
 }
 
 /**
  * We check to see if the database has the MBTiles Schema.
- * If not, we execute the schema SQL.
+ * Sets m_schemaOptions from metadata table
  *
  * @param _source A pointer to a the data source in which we will setup a db.
+ * @return true if database contains MBTiles schema
  */
-void MBTilesDataSource::initMBTilesSchema(SQLite::Database& db, std::string _name, std::string _mimeType) {
+bool MBTilesDataSource::testSchema(SQLite::Database& db) {
 
-    bool map = false, grid_key = false, keymap = false, grid_utfgrid = false, images = false,
-         metadata = false, geocoder_data = false, tiles = false, grids = false, grid_data = false;
+    bool metadata = false, tiles = false, grids = false, grid_data = false;
 
     try {
         SQLite::Statement query(db, "SELECT name FROM sqlite_master WHERE type IN ('table', 'view')");
         while (query.executeStep()) {
             std::string name = query.getColumn(0);
-            if (name == "map") map = true;
-            else if (name == "grid_key") grid_key = true;
-            else if (name == "keymap") keymap = true;
-            else if (name == "grid_utfgrid") grid_utfgrid = true;
-            else if (name == "images") images = true;
-            else if (name == "metadata") metadata = true;
-            else if (name == "geocoder_data") geocoder_data = true;
+            // required
+            if (name == "metadata") metadata = true;
             else if (name == "tiles") tiles = true;
+            // optional
             else if (name == "grids") grids = true;
             else if (name == "grid_data") grid_data = true;
+            // schema implementation specific
+            // else if (name == "map") map = true;
+            // else if (name == "images") images = true;
+            // else if (name == "grid_key") grid_key = true;
+            // else if (name == "keymap") keymap = true;
+            // else if (name == "grid_utfgrid") grid_utfgrid = true;
+            // else if (name == "geocoder_data") geocoder_data = true;
         }
     } catch (std::exception& e) {
         LOGE("Unable to check schema of SQLite MBTiles database: %s", e.what());
+        return false;
     }
 
-    // Return if we have all the tables and views that should exist.
-    if (map && grid_key && keymap && grid_utfgrid && images &&
-            metadata && geocoder_data && tiles && grids && grid_data) {
-        return;
+    if (!metadata || !tiles) {
+        LOGW("Missing MBTiles tables");
+        return false;
     }
+
+    try {
+        SQLite::Statement query(db, "SELECT value FROM metadata WHERE name = 'description';");
+        if (query.executeStep()) {
+            std::string description = query.getColumn(0);
+            if (description == "MBTiles tile container created by Tangram ES.") {
+                m_schemaOptions.isCache = true;
+            }
+        }
+    } catch (std::exception& e) {
+        LOGE("TODO");
+    }
+
+    try {
+        SQLite::Statement query(db, "SELECT value FROM metadata WHERE name = 'compression';");
+        if (query.executeStep()) {
+            std::string compression = query.getColumn(0);
+
+            if (compression == "identity") {
+                m_schemaOptions.compression = Compression::identity;
+            } else if (compression == "deflate") {
+                m_schemaOptions.compression = Compression::deflate;
+            } else {
+                LOGE("Unsupported MBTiles tile compression: %s", compression.c_str());
+                m_schemaOptions.compression = Compression::unsupported;
+            }
+        }
+    } catch (std::exception& e) {
+        LOGE("TODO");
+    }
+
+    if (grids && grid_data) {
+        m_schemaOptions.utfGrid = true;
+    }
+
+    return true;
+}
+
+void MBTilesDataSource::initSchema(SQLite::Database& db, std::string _name, std::string _mimeType) {
 
     // Otherwise, we need to execute schema.sql to set up the db with the right schema.
     try {
@@ -356,9 +431,18 @@ bool MBTilesDataSource::getTileData(const TileID& _tileId, std::vector<char>& _d
             const char* blob = (const char*) column.getBlob();
             const int length = column.getBytes();
 
-            // OSM2Vectiles does not contain a 'compression' field
-            // Try deflate by default..
-            if (zlib::inflate(blob, length, _data) != 0) {
+            if ((m_schemaOptions.compression == Compression::undefined) ||
+                (m_schemaOptions.compression == Compression::deflate)) {
+
+                if (zlib::inflate(blob, length, _data) != 0) {
+                    if (m_schemaOptions.compression == Compression::undefined) {
+                        _data.resize(length);
+                        memcpy(_data.data(), blob, length);
+                    } else {
+                        LOGW("Invalid deflate compression");
+                    }
+                }
+            } else {
                 _data.resize(length);
                 memcpy(_data.data(), blob, length);
             }

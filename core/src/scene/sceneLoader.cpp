@@ -979,9 +979,9 @@ void SceneLoader::loadSource(const std::string& name, const Node& source, const 
         tiled = true;
 
         if (url.empty()) {
-            rawSources->setNext(std::make_unique<MBTilesDataSource>(name, mbtiles, mime, false));
+            rawSources->setNext(std::make_unique<MBTilesDataSource>(name, mbtiles, mime));
         } else {
-            rawSources->setNext(std::make_unique<MBTilesDataSource>(name, mbtiles, mime, true));
+            rawSources->setNext(std::make_unique<MBTilesDataSource>(name, mbtiles, mime, true, true));
             rawSources->next->setNext(std::make_unique<NetworkDataSource>(url));
         }
 

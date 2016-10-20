@@ -15,7 +15,7 @@ class MBTilesDataSource : public RawDataSource {
 public:
 
     MBTilesDataSource(std::string _name, std::string _path, std::string _mime,
-                      bool _offlineCache = false);
+                      bool _cache = false, bool _offlineFallback = false);
 
     ~MBTilesDataSource();
 
@@ -28,8 +28,9 @@ private:
     void storeTileData(const TileID& _tileId, const std::vector<char>& _data);
     bool loadNextSource(std::shared_ptr<TileTask> _task, TileTaskCb _cb);
 
-    void setupMBTiles();
-    void initMBTilesSchema(SQLite::Database& db, std::string _name, std::string _mimeType);
+    void openMBTiles();
+    bool testSchema(SQLite::Database& db);
+    void initSchema(SQLite::Database& db, std::string _name, std::string _mimeType);
 
     std::string m_name;
 
@@ -37,13 +38,29 @@ private:
     std::string m_path;
     std::string m_mime;
 
-    // Offline fallback: Try download (next source) first, then fall back to mbtiles
-    bool m_offlineMode = true;
+    // Store tiles from next source
+    bool m_cacheMode;
+
+    // Offline fallback: Try next source (download) first, then fall back to mbtiles
+    bool m_offlineMode;
 
     // Pointer to SQLite DB of MBTiles store
     std::unique_ptr<SQLite::Database> m_db;
     std::unique_ptr<MBTilesQueries> m_queries;
     std::unique_ptr<AsyncWorker> m_worker;
+
+    enum class Compression {
+        undefined,
+        identity,
+        deflate,
+        unsupported
+    };
+
+    struct {
+        Compression compression = Compression::undefined;
+        bool isCache = false;
+        bool utfGrid = false;
+    } m_schemaOptions;
 };
 
 }
